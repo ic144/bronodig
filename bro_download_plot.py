@@ -46,10 +46,10 @@ from pyproj import CRS, Transformer
 import json
 import re
 from datetime import datetime
+from shapely.wkt import loads
 
 from .gefxml_reader import Cpt, Bore
-
-
+from .geotechnisch_lengteprofiel import Cptverzameling, Boreverzameling, GeotechnischLengteProfiel
 
 class PointTool(QgsMapToolEmitPoint):
 
@@ -294,29 +294,109 @@ class BroDownloadPlot:
             bbox = (int(point[0])-marge,int(point[1])-marge, int(point[0]+marge),int(point[1]+marge))          
             miny, minx = transformer.transform(bbox[0], bbox[1])
             maxy, maxx = transformer.transform(bbox[2], bbox[3])
+            self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
         
         elif not punt_of_laag:
             for feature in selected_layer.getFeatures():
                 geometry = feature.geometry()
-                # maak een bounding box voor het ophalen van data
-                bbox = geometry.boundingBox()
-                minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
-                miny, minx = transformer.transform(minx, miny)
-                maxy, maxx = transformer.transform(maxx, maxy)
+                if geometry.asWkt().lower().startswith('polygon'):
+                    # maak een bounding box voor het ophalen van data
+                    bbox = geometry.boundingBox()
+                    minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
+                    miny, minx = transformer.transform(minx, miny)
+                    maxy, maxx = transformer.transform(maxx, maxy)
+                    self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+
+            # maak een profiel als er een lijn is opgegeven        
+                elif geometry.asWkt().lower().startswith('linestring'):
+                    # maak een bounding box voor het ophalen van data
+                    bbox = geometry.boundingBox()
+                    minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
+                    miny, minx = transformer.transform(minx, miny)
+                    maxy, maxx = transformer.transform(maxx, maxy)
+                    geometry = geometry.asWkt()
+                    geometry = loads(geometry)
+                    
+                    self.maak_profiel(geometry, minx, miny, maxx, maxy)
         
-        # TODO: als de geometrie een lijn is, dan een profiel maken
-            # for feature in selected_layer.getFeatures():
-            #     if feature.wkbType == 'linestring':
-            #         geometry = feature.geometry()
-            #         # maak een bounding box voor het ophalen van data
-            #         bbox = geometry.boundingBox()
-            #         # maak een buffer voor het filteren van data
-            #         buffer = geometry.buffer()
-            #         pass
+    def maak_profiel(self, geometry, minx, miny, maxx, maxy):
+        test_types = ['cpt', 'bhrgt']
         
+        for test_type in test_types:
+            if test_type == 'cpt':
+                test = Cpt()
+                url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
+                multicpt = Cptverzameling()
+
+            elif test_type == 'bhrgt':
+                test = Bore()
+                url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches"
+                multibore = Boreverzameling()
+                
+            headers = CaseInsensitiveDict()
+            headers["Accept"] = "application/json"
+            headers["Content-Type"] = "application/json"
+
+            # maak een request om mee te geven aan de url
+            today = datetime.today().strftime('%Y-%m-%d')
+
+            # beginDate mag niet te vroeg zijn 2017-01-01 werkt, 2008 niet
+            dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": miny, "lon": minx}, "upperCorner": {"lat": maxy, "lon": maxx}}}}
+            dataBB = json.dumps(dataBBdict)
+
+            # doe de request
+            broResp = requests.post(url, headers=headers, data=dataBB)
+            broResp_dec = broResp.content.decode("utf-8")
+            
+            root = ET.fromstring(broResp_dec)
+
+            # lees xy en id in uit de xml
+            broIds = []
+            broGeoms = []
+
+            for element in root.iter():
+                if 'dispatchDocument' in element.tag:
+                    broId = False
+                    broGeom = False
+
+                    metadata = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
+
+                    broId = metadata['broId']
+                    
+                    for child in element.iter():
+                        if 'deliveredLocation' in child.tag:
+                            locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
+                            coords = locationData['pos']
+                            
+                            broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
+
+                    if type(broId) == str and type(broGeom) == Point:
+                        broIds.append(broId)
+                        broGeoms.append(broGeom)
+
+            # QMessageBox.information(self.dlg, "aantal", f"aantal {len(broIds)}")
+
+            for broId in broIds:
+                if test_type == 'cpt':
+                    url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
+                    resp = requests.get(url).content.decode("utf-8")
+                    test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
+                    multicpt.cpts.append(test)
+                elif test_type == 'bhrgt':
+                    url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
+                    resp = requests.get(url).content.decode("utf-8")
+                    test.load_xml(resp, fromFile=False)
+                    multibore.bores.append(test)
         
-        
-        self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+        QMessageBox.information(self.dlg, "aantal", f"aantal {len(multibore.bores)}")
+        gtl = GeotechnischLengteProfiel()
+        gtl.set_line(geometry)
+        gtl.set_cpts(multicpt)
+        gtl.set_bores(multibore)
+        gtl.project_on_line()
+        gtl.set_groundlevel()
+        fig = gtl.plot(boundaries={}, profilename="", saveFig=False)
+        fig.show()
 
     def haal_en_plot(self, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder):
         test_types = []
