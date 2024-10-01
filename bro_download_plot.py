@@ -285,7 +285,7 @@ class BroDownloadPlot:
     def plotDataBro(self, point, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer, punt_of_laag):
         # maak een bounding box in lat, lon -> gebruiken we niet
         # maak een center met radius in lat, lon -> gebruiken we wel
-        latlon = CRS.from_epsg(4326)
+        latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
         rd = CRS.from_epsg(28992)
         transformer = Transformer.from_crs(rd, latlon)
 
@@ -324,12 +324,10 @@ class BroDownloadPlot:
         
         for test_type in test_types:
             if test_type == 'cpt':
-                test = Cpt()
                 url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
                 multicpt = Cptverzameling()
 
             elif test_type == 'bhrgt':
-                test = Bore()
                 url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches"
                 multibore = Boreverzameling()
                 
@@ -374,21 +372,21 @@ class BroDownloadPlot:
                         broIds.append(broId)
                         broGeoms.append(broGeom)
 
-            # QMessageBox.information(self.dlg, "aantal", f"aantal {len(broIds)}")
-
             for broId in broIds:
                 if test_type == 'cpt':
+                    test = Cpt()
                     url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
                     resp = requests.get(url).content.decode("utf-8")
                     test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
                     multicpt.cpts.append(test)
                 elif test_type == 'bhrgt':
+                    test = Bore()
                     url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
                     resp = requests.get(url).content.decode("utf-8")
                     test.load_xml(resp, fromFile=False)
                     multibore.bores.append(test)
         
-        QMessageBox.information(self.dlg, "aantal", f"boringen {len(multibore.bores)} \n cpt {len(multicpt.cpts)}")
+        QMessageBox.information(self.dlg, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
         gtl = GeotechnischLengteProfiel()
         gtl.set_line(geometry)
         gtl.set_cpts(multicpt)
