@@ -364,7 +364,7 @@ class BroDownloadPlot:
                     broId = metadata['broId']
                     
                     for child in element.iter():
-                        if 'deliveredLocation' in child.tag:
+                        if 'standardizedLocation' in child.tag:
                             locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
                             coords = locationData['pos']
                             
