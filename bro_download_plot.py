@@ -347,7 +347,7 @@ class BroDownloadPlot:
             # doe de request
             broResp = requests.post(url, headers=headers, data=dataBB)
             broResp_dec = broResp.content.decode("utf-8")
-            
+           
             root = ET.fromstring(broResp_dec)
 
             # lees xy en id in uit de xml
@@ -388,7 +388,7 @@ class BroDownloadPlot:
                     test.load_xml(resp, fromFile=False)
                     multibore.bores.append(test)
         
-        QMessageBox.information(self.dlg, "aantal", f"aantal {len(multibore.bores)}")
+        QMessageBox.information(self.dlg, "aantal", f"boringen {len(multibore.bores)} \n cpt {len(multicpt.cpts)}")
         gtl = GeotechnischLengteProfiel()
         gtl.set_line(geometry)
         gtl.set_cpts(multicpt)
@@ -441,21 +441,20 @@ class BroDownloadPlot:
                     broGeom = False
 
                     metadata = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
-
                     broId = metadata['broId']
-                    
+
                     for child in element.iter():
-                        if 'deliveredLocation' in child.tag:
+                        if 'standardizedLocation' in child.tag:
                             locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
                             coords = locationData['pos']
-                            
+
                             broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
 
                     if type(broId) == str and type(broGeom) == Point:
                         broIds.append(broId)
                         broGeoms.append(broGeom)
 
-            QMessageBox.information(self.dlg, "aantal", f"aantal {len(broIds)}")
+            # QMessageBox.information(self.dlg, "aantal", f"aantal {len(broIds)}")
 
             for broId in broIds:
                 if test_type == 'cpt':
