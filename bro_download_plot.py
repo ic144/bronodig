@@ -28,7 +28,7 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox, QVBoxLayout, QWidget
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
-from .bro_download_plot_dialog import BroDownloadPlotDialog
+from .bro_download_plot_dockwidget import BroDownloadPlotDockWidget
 import os.path
 
 from qgis.gui import QgsMapTool, QgsMapToolEmitPoint
@@ -231,7 +231,7 @@ class BroDownloadPlot:
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
-            self.dlg = BroDownloadPlotDialog()
+            self.dlg = BroDownloadPlotDockWidget()
 
             # self.connect_tool()  # TODO: willen we dit?
             self.dlg.pushButton.clicked.connect(self.some_function)
