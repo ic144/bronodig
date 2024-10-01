@@ -33,12 +33,10 @@ __status__ = "Dev"
 import numpy as np
 import pandas as pd
 import sys
-import tkinter as tk
 from datetime import datetime
 import matplotlib.pyplot as plt
 from shapely.geometry import Point, box
 import shapely.affinity as sa
-import contextily as ctx
 import geopandas as gpd
 
 # TODO: gefxml_reader importeren uit geotexxx
