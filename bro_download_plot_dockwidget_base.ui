@@ -15,40 +15,10 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="11" column="0">
-     <widget class="QCheckBox" name="checkBoxPunt">
-      <property name="text">
-       <string>Gebruik centrum van kaart of selecteer laag</string>
-      </property>
-      <property name="checked">
-       <bool>false</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="9" column="0">
-     <widget class="QgsFileWidget" name="mQgsFileWidget">
-      <property name="storageMode">
-       <enum>QgsFileWidget::GetDirectory</enum>
-      </property>
-      <property name="options">
-       <set>QFileDialog::ShowDirsOnly</set>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="0">
-     <widget class="QCheckBox" name="checkBoxXml">
-      <property name="text">
-       <string>XML opslaan</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0">
+    <item row="16" column="0">
      <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox"/>
     </item>
-    <item row="5" column="0">
+    <item row="3" column="0">
      <widget class="QTextBrowser" name="textBrowser">
       <property name="html">
        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -64,17 +34,17 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="7" column="0">
-     <widget class="QCheckBox" name="checkBoxCpt">
+    <item row="9" column="0">
+     <widget class="QCheckBox" name="checkBoxXml">
       <property name="text">
-       <string>CPT</string>
+       <string>XML opslaan</string>
       </property>
       <property name="checked">
        <bool>true</bool>
       </property>
      </widget>
     </item>
-    <item row="4" column="0">
+    <item row="7" column="0">
      <widget class="QCheckBox" name="checkBoxPng">
       <property name="text">
        <string>PNG opslaan</string>
@@ -84,24 +54,7 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="10" column="0">
-     <widget class="QCheckBox" name="checkBoxBoring">
-      <property name="text">
-       <string>Boring</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="label_3">
-      <property name="text">
-       <string>Map voor opslaan</string>
-      </property>
-     </widget>
-    </item>
-    <item row="8" column="0">
+    <item row="11" column="0">
      <widget class="QCheckBox" name="checkBoxPdf">
       <property name="text">
        <string>PDF opslaan</string>
@@ -111,20 +64,67 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="2" column="0">
-     <widget class="QCheckBox" name="checkBoxShow">
+    <item row="5" column="0">
+     <widget class="QCheckBox" name="checkBoxCpt">
       <property name="text">
-       <string>Tonen</string>
+       <string>CPT</string>
       </property>
       <property name="checked">
        <bool>true</bool>
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
+    <item row="13" column="0">
+     <widget class="QgsFileWidget" name="mQgsFileWidget">
+      <property name="storageMode">
+       <enum>QgsFileWidget::GetDirectory</enum>
+      </property>
+      <property name="options">
+       <set>QFileDialog::ShowDirsOnly</set>
+      </property>
+     </widget>
+    </item>
+    <item row="17" column="0">
      <widget class="QPushButton" name="pushButton">
       <property name="text">
        <string>Haal en plot</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QCheckBox" name="checkBoxBoring">
+      <property name="text">
+       <string>Boring</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="0">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Map voor opslaan</string>
+      </property>
+     </widget>
+    </item>
+    <item row="15" column="0">
+     <widget class="QCheckBox" name="checkBoxPunt">
+      <property name="text">
+       <string>Gebruik centrum van kaart of selecteer laag</string>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QCheckBox" name="checkBoxShow">
+      <property name="text">
+       <string>Tonen</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
