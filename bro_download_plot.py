@@ -21,14 +21,14 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import pyqtSignal, QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import pyqtSignal, QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMessageBox, QVBoxLayout, QWidget
 
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
-from .bro_download_plot_dialog import BroDownloadPlotDialog
+from .bro_download_plot_dockwidget import BroDownloadPlotDockWidget
 import os.path
 
 from qgis.gui import QgsMapTool, QgsMapToolEmitPoint
@@ -231,10 +231,10 @@ class BroDownloadPlot:
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
-            self.dlg = BroDownloadPlotDialog()
+            self.dockwidget = BroDownloadPlotDockWidget()
 
             # self.connect_tool()  # TODO: willen we dit?
-            self.dlg.pushButton.clicked.connect(self.some_function)
+            self.dockwidget.pushButton.clicked.connect(self.some_function)
     
         self.mc = self.iface.mapCanvas()
         # self.dlg.doubleSpinBoxX.setValue(self.mc.center().x())
@@ -243,14 +243,15 @@ class BroDownloadPlot:
         matplotlib_widget = MatplotlibWidget()
 
         # show the dialog
-        self.dlg.show()
+        self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
+        self.dockwidget.show()
         # Run the dialog event loop
-        result = self.dlg.exec_()
+        # result = self.dlg.exec_()
         # See if OK was pressed
-        if result:
+        # if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+            # pass
 
     def connect_tool(self):
         self.point_tool = PointTool(self.iface.mapCanvas())
@@ -260,22 +261,22 @@ class BroDownloadPlot:
         # do_enkele_klik = self.dlg.radioButtonEnkel.isChecked()
         # do_bbox = self.dlg.radioButtonBbox.isChecked()
 
-        do_cpt = self.dlg.checkBoxCpt.isChecked()
-        do_boring = self.dlg.checkBoxBoring.isChecked()
+        do_cpt = self.dockwidget.checkBoxCpt.isChecked()
+        do_boring = self.dockwidget.checkBoxBoring.isChecked()
 
-        save_xml = self.dlg.checkBoxXml.isChecked()
-        save_png = self.dlg.checkBoxPng.isChecked()
-        save_pdf = self.dlg.checkBoxPdf.isChecked()
+        save_xml = self.dockwidget.checkBoxXml.isChecked()
+        save_png = self.dockwidget.checkBoxPng.isChecked()
+        save_pdf = self.dockwidget.checkBoxPdf.isChecked()
         if any([save_pdf, save_png, save_xml]):
-            folder = self.dlg.mQgsFileWidget.filePath()
+            folder = self.dockwidget.mQgsFileWidget.filePath()
         else:
             folder = ""
 
-        show_plot = self.dlg.checkBoxShow.isChecked()
+        show_plot = self.dockwidget.checkBoxShow.isChecked()
 
-        selected_layer = self.dlg.mMapLayerComboBox.currentLayer()
+        selected_layer = self.dockwidget.mMapLayerComboBox.currentLayer()
 
-        punt_of_laag = self.dlg.checkBoxPunt.isChecked()
+        punt_of_laag = self.dockwidget.checkBoxPunt.isChecked()
 
         x = self.mc.center().x()  #self.dlg.doubleSpinBoxX.value()
         y = self.mc.center().y()  #self.dlg.doubleSpinBoxY.value()
@@ -386,7 +387,7 @@ class BroDownloadPlot:
                     test.load_xml(resp, fromFile=False)
                     multibore.bores.append(test)
         
-        QMessageBox.information(self.dlg, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
+        QMessageBox.information(self.dockwidget, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
         gtl = GeotechnischLengteProfiel()
         gtl.set_line(geometry)
         gtl.set_cpts(multicpt)
