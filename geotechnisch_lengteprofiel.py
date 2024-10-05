@@ -32,16 +32,13 @@ __status__ = "Dev"
 
 import numpy as np
 import pandas as pd
-import sys
 from datetime import datetime
 import matplotlib.pyplot as plt
 from shapely.geometry import Point, box
 import shapely.affinity as sa
 import geopandas as gpd
 
-# TODO: gefxml_reader importeren uit geotexxx
-sys.path.insert(0, '../gefxml_viewer')
-from gefxml_reader import Cpt, Bore
+from .gefxml_reader import Cpt, Bore
 
 class Cptverzameling():
     def __init__(self):

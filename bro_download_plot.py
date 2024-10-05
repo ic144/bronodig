@@ -227,8 +227,10 @@ class BroDownloadPlot:
         if self.first_start == True:
             self.first_start = False
             self.dockwidget = BroDownloadPlotDockWidget()
+
             self.dockwidget.pushButton.clicked.connect(self.startCapturing) # TODO: dit moet een andere knop worden
-            # self.dockwidget.pushButton.clicked.connect(self.some_function) # TODO: dit weer inschakelen.
+            self.dockwidget.pushButtonEenvoudig.clicked.connect(self.eenvoudig_tab)
+            self.dockwidget.pushButtonComplex.clicked.connect(self.complex_tab)
     
         self.mc = self.iface.mapCanvas()
         # self.dlg.doubleSpinBoxX.setValue(self.mc.center().x())
@@ -247,9 +249,20 @@ class BroDownloadPlot:
             # substitute with your code.
             # pass
 
-    def some_function(self):
-        # do_enkele_klik = self.dlg.radioButtonEnkel.isChecked()
-        # do_bbox = self.dlg.radioButtonBbox.isChecked()
+
+    def eenvoudig_tab(self):
+
+        do_cpt = self.dockwidget.radioButtonCpt.isChecked()
+        do_boring = self.dockwidget.radioButtonBoring.isChecked()
+
+        show_plot = True
+
+        x = self.mc.center().x()
+        y = self.mc.center().y()
+
+        self.plotDataBro_eenvoudig([x, y], do_cpt, do_boring, show_plot)
+
+    def complex_tab(self):
 
         do_cpt = self.dockwidget.checkBoxCpt.isChecked()
         do_boring = self.dockwidget.checkBoxBoring.isChecked()
@@ -266,49 +279,52 @@ class BroDownloadPlot:
 
         selected_layer = self.dockwidget.mMapLayerComboBox.currentLayer()
 
-        punt_of_laag = self.dockwidget.checkBoxPunt.isChecked()
+        self.plotDataBro_complex(do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer)
 
-        x = self.mc.center().x()  #self.dlg.doubleSpinBoxX.value()
-        y = self.mc.center().y()  #self.dlg.doubleSpinBoxY.value()
-
-        self.plotDataBro([x, y], do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer, punt_of_laag)
-
-    def plotDataBro(self, point, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer, punt_of_laag):
+    def plotDataBro_eenvoudig(self, point, do_cpt, do_boring, show_plot):
         # maak een bounding box in lat, lon -> gebruiken we niet
         # maak een center met radius in lat, lon -> gebruiken we wel
         latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
         rd = CRS.from_epsg(28992)
         transformer = Transformer.from_crs(rd, latlon)
 
-        if punt_of_laag:
-            marge = 1
-            bbox = (int(point[0])-marge,int(point[1])-marge, int(point[0]+marge),int(point[1]+marge))          
-            miny, minx = transformer.transform(bbox[0], bbox[1])
-            maxy, maxx = transformer.transform(bbox[2], bbox[3])
-            self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
-        
-        elif not punt_of_laag:
-            for feature in selected_layer.getFeatures():
-                geometry = feature.geometry()
-                if geometry.asWkt().lower().startswith('polygon'):
-                    # maak een bounding box voor het ophalen van data
-                    bbox = geometry.boundingBox()
-                    minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
-                    miny, minx = transformer.transform(minx, miny)
-                    maxy, maxx = transformer.transform(maxx, maxy)
-                    self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+        save_xml, save_png, save_pdf = False, False, False
+        folder = ''
 
-            # maak een profiel als er een lijn is opgegeven        
-                elif geometry.asWkt().lower().startswith('linestring'):
-                    # maak een bounding box voor het ophalen van data
-                    bbox = geometry.boundingBox()
-                    minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
-                    miny, minx = transformer.transform(minx, miny)
-                    maxy, maxx = transformer.transform(maxx, maxy)
-                    geometry = geometry.asWkt()
-                    geometry = loads(geometry)
-                    
-                    self.maak_profiel(geometry, minx, miny, maxx, maxy)
+        marge = 1
+        bbox = (int(point[0])-marge,int(point[1])-marge, int(point[0]+marge),int(point[1]+marge))          
+        miny, minx = transformer.transform(bbox[0], bbox[1])
+        maxy, maxx = transformer.transform(bbox[2], bbox[3])
+        self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+
+    def plotDataBro_complex(self, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer):
+        # maak een bounding box in lat, lon -> gebruiken we niet
+        # maak een center met radius in lat, lon -> gebruiken we wel
+        latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
+        rd = CRS.from_epsg(28992)
+        transformer = Transformer.from_crs(rd, latlon)
+
+        for feature in selected_layer.getFeatures():
+            geometry = feature.geometry()
+            if geometry.asWkt().lower().startswith('polygon'):
+                # maak een bounding box voor het ophalen van data
+                bbox = geometry.boundingBox()
+                minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
+                miny, minx = transformer.transform(minx, miny)
+                maxy, maxx = transformer.transform(maxx, maxy)
+                self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+
+        # maak een profiel als er een lijn is opgegeven        
+            elif geometry.asWkt().lower().startswith('linestring'):
+                # maak een bounding box voor het ophalen van data
+                bbox = geometry.boundingBox()
+                minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
+                miny, minx = transformer.transform(minx, miny)
+                maxy, maxx = transformer.transform(maxx, maxy)
+                geometry = geometry.asWkt()
+                geometry = loads(geometry)
+                
+                self.maak_profiel(geometry, minx, miny, maxx, maxy)
         
     def maak_profiel(self, geometry, minx, miny, maxx, maxy):
         test_types = ['cpt', 'bhrgt']
