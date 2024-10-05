@@ -228,7 +228,6 @@ class BroDownloadPlot:
             self.first_start = False
             self.dockwidget = BroDownloadPlotDockWidget()
 
-            self.dockwidget.pushButton.clicked.connect(self.startCapturing) # TODO: dit moet een andere knop worden
             self.dockwidget.pushButtonEenvoudig.clicked.connect(self.eenvoudig_tab)
             self.dockwidget.pushButtonComplex.clicked.connect(self.complex_tab)
     
@@ -252,15 +251,13 @@ class BroDownloadPlot:
 
     def eenvoudig_tab(self):
 
-        do_cpt = self.dockwidget.radioButtonCpt.isChecked()
-        do_boring = self.dockwidget.radioButtonBoring.isChecked()
+        self.do_cpt = self.dockwidget.radioButtonCpt.isChecked()
+        self.do_boring = self.dockwidget.radioButtonBoring.isChecked()
 
-        show_plot = True
+        self.show_plot = True
 
-        x = self.mc.center().x()
-        y = self.mc.center().y()
-
-        self.plotDataBro_eenvoudig([x, y], do_cpt, do_boring, show_plot)
+        # dit was startCapturing
+        self.iface.mapCanvas().setMapTool(self.mapTool)
 
     def complex_tab(self):
 
@@ -487,9 +484,5 @@ class BroDownloadPlot:
     def mouseClicked(self, point: QgsPointXY):
         self.update(point)
         
-    def update(self, point: QgsPointXY):
-        QMessageBox.information(self.dockwidget, "aantal", f"boringen {point}")        
-        # TODO: dit omschrijven, zodat het runt dat er BRO data wordt gehaald, maar dat is helemaal anders geworden
-
-    def startCapturing(self):
-        self.iface.mapCanvas().setMapTool(self.mapTool)
+    def update(self, point: QgsPointXY):   
+        self.plotDataBro_eenvoudig(point, self.do_cpt, self.do_boring, self.show_plot)
