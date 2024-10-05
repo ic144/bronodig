@@ -31,6 +31,9 @@ from .resources import *
 from .bro_download_plot_dockwidget import BroDownloadPlotDockWidget
 import os.path
 
+from .coordinate_capture_map_tool import CoordinateCaptureMapTool
+
+from qgis.core import QgsPointXY
 from qgis.gui import QgsMapTool, QgsMapToolEmitPoint
 from qgis.utils import iface
 
@@ -51,16 +54,6 @@ from shapely.wkt import loads
 from .gefxml_reader import Cpt, Bore
 from .geotechnisch_lengteprofiel import Cptverzameling, Boreverzameling, GeotechnischLengteProfiel
 
-class PointTool(QgsMapToolEmitPoint):
-
-    canvasClicked = pyqtSignal('QgsPointXY')
-    
-    def __init__(self, canvas):
-        super(QgsMapTool, self).__init__(canvas)
-
-    def canvasReleaseEvent(self, event):
-        point = event.mapPoint()
-        self.canvasClicked['QgsPointXY'].emit(point)
 
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None):
@@ -110,6 +103,8 @@ class BroDownloadPlot:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+        self.mapTool = CoordinateCaptureMapTool(self.iface.mapCanvas())
+        self.mapTool.mouseClicked.connect(self.mouseClicked)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -232,9 +227,8 @@ class BroDownloadPlot:
         if self.first_start == True:
             self.first_start = False
             self.dockwidget = BroDownloadPlotDockWidget()
-
-            # self.connect_tool()  # TODO: willen we dit?
-            self.dockwidget.pushButton.clicked.connect(self.some_function)
+            self.dockwidget.pushButton.clicked.connect(self.startCapturing) # TODO: dit moet een andere knop worden
+            # self.dockwidget.pushButton.clicked.connect(self.some_function) # TODO: dit weer inschakelen.
     
         self.mc = self.iface.mapCanvas()
         # self.dlg.doubleSpinBoxX.setValue(self.mc.center().x())
@@ -252,10 +246,6 @@ class BroDownloadPlot:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
             # pass
-
-    def connect_tool(self):
-        self.point_tool = PointTool(self.iface.mapCanvas())
-        self.point_tool.canvasClicked['QgsPointXY'].connect(self.plotDataBro)
 
     def some_function(self):
         # do_enkele_klik = self.dlg.radioButtonEnkel.isChecked()
@@ -477,3 +467,13 @@ class BroDownloadPlot:
                 if save_xml:
                     with open(f'{folder}/{broId}.xml', 'a') as f:
                         f.write(resp)
+
+    def mouseClicked(self, point: QgsPointXY):
+        self.update(point)
+        
+    def update(self, point: QgsPointXY):
+        QMessageBox.information(self.dockwidget, "aantal", f"boringen {point}")        
+        # TODO: dit omschrijven, zodat het runt dat er BRO data wordt gehaald, maar dat is helemaal anders geworden
+
+    def startCapturing(self):
+        self.iface.mapCanvas().setMapTool(self.mapTool)
