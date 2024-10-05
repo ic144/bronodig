@@ -1,6 +1,5 @@
 import os
 import geopandas as gpd
-import sys
 
 from .geotechnisch_lengteprofiel import Cptverzameling, Boreverzameling, GeotechnischLengteProfiel
 from .gefxml_reader import Cpt, Bore, Test
