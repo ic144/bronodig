@@ -228,8 +228,9 @@ class BroDownloadPlot:
             self.first_start = False
             self.dockwidget = BroDownloadPlotDockWidget()
 
-            self.dockwidget.pushButtonEenvoudig.clicked.connect(self.eenvoudig_tab)
-            self.dockwidget.pushButtonComplex.clicked.connect(self.complex_tab)
+            self.dockwidget.pushButtonVerkennen.clicked.connect(self.verkennen_tab)
+            self.dockwidget.pushButtonBulk.clicked.connect(self.bulk_tab)
+            self.dockwidget.pushButtonProfiel.clicked.connect(self.profiel_tab)
     
         self.mc = self.iface.mapCanvas()
         # self.dlg.doubleSpinBoxX.setValue(self.mc.center().x())
@@ -249,7 +250,7 @@ class BroDownloadPlot:
             # pass
 
 
-    def eenvoudig_tab(self):
+    def verkennen_tab(self):
 
         self.do_cpt = self.dockwidget.radioButtonCpt.isChecked()
         self.do_boring = self.dockwidget.radioButtonBoring.isChecked()
@@ -259,7 +260,7 @@ class BroDownloadPlot:
         # dit was startCapturing
         self.iface.mapCanvas().setMapTool(self.mapTool)
 
-    def complex_tab(self):
+    def bulk_tab(self):
 
         do_cpt = self.dockwidget.checkBoxCpt.isChecked()
         do_boring = self.dockwidget.checkBoxBoring.isChecked()
@@ -276,9 +277,30 @@ class BroDownloadPlot:
 
         selected_layer = self.dockwidget.mMapLayerComboBox.currentLayer()
 
-        self.plotDataBro_complex(do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer)
+        self.plotDataBro_bulk(do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer)
 
-    def plotDataBro_eenvoudig(self, point, do_cpt, do_boring, show_plot):
+    def profiel_tab(self):
+        do_cpt = self.dockwidget.checkBoxCpt_profiel.isChecked()
+        do_boring = self.dockwidget.checkBoxBoring_profiel.isChecked()
+
+        save_svg = self.dockwidget.checkBoxSvg_profiel.isChecked()
+        save_png = self.dockwidget.checkBoxPng_profiel.isChecked()
+        save_pdf = self.dockwidget.checkBoxPdf_profiel.isChecked()
+        if any([save_pdf, save_png, save_svg]):
+            folder = self.dockwidget.mQgsFileWidget_profiel.filePath()
+        else:
+            folder = ""
+
+        buffer = float(self.dockwidget.spinBox_buffer.value())
+
+        show_plot = self.dockwidget.checkBoxShow_profiel.isChecked()
+
+        selected_layer = self.dockwidget.mMapLayerComboBox_profiel.currentLayer()
+
+        self.plotDataBro_profiel(do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, selected_layer, buffer)
+
+
+    def plotDataBro_verkennen(self, point, do_cpt, do_boring, show_plot):
         # maak een bounding box in lat, lon -> gebruiken we niet
         # maak een center met radius in lat, lon -> gebruiken we wel
         latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
@@ -294,7 +316,7 @@ class BroDownloadPlot:
         maxy, maxx = transformer.transform(bbox[2], bbox[3])
         self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
 
-    def plotDataBro_complex(self, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer):
+    def plotDataBro_bulk(self, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer):
         # maak een bounding box in lat, lon -> gebruiken we niet
         # maak een center met radius in lat, lon -> gebruiken we wel
         latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
@@ -311,19 +333,27 @@ class BroDownloadPlot:
                 maxy, maxx = transformer.transform(maxx, maxy)
                 self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
 
-        # maak een profiel als er een lijn is opgegeven        
-            elif geometry.asWkt().lower().startswith('linestring'):
+    def plotDataBro_profiel(self, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, selected_layer, buffer):
+        # maak een bounding box in lat, lon
+        latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
+        rd = CRS.from_epsg(28992)
+        transformer = Transformer.from_crs(rd, latlon)
+
+        # maak een profiel als er een lijn is opgegeven
+        for feature in selected_layer.getFeatures():
+            geometry = feature.geometry()        
+            if geometry.asWkt().lower().startswith('linestring'):
                 # maak een bounding box voor het ophalen van data
-                bbox = geometry.boundingBox()
+                bbox = geometry.buffer(buffer, segments=5).boundingBox()
                 minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
                 miny, minx = transformer.transform(minx, miny)
                 maxy, maxx = transformer.transform(maxx, maxy)
                 geometry = geometry.asWkt()
                 geometry = loads(geometry)
                 
-                self.maak_profiel(geometry, minx, miny, maxx, maxy)
+                self.maak_profiel(geometry, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder)
         
-    def maak_profiel(self, geometry, minx, miny, maxx, maxy):
+    def maak_profiel(self, geometry, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder):
         test_types = ['cpt', 'bhrgt']
         
         for test_type in test_types:
@@ -377,20 +407,20 @@ class BroDownloadPlot:
                         broGeoms.append(broGeom)
 
             for broId in broIds:
-                if test_type == 'cpt':
+                if test_type == 'cpt' and do_cpt:
                     test = Cpt()
                     url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
                     resp = requests.get(url).content.decode("utf-8")
                     test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
                     multicpt.cpts.append(test)
-                elif test_type == 'bhrgt':
+                elif test_type == 'bhrgt' and do_boring:
                     test = Bore()
                     url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
                     resp = requests.get(url).content.decode("utf-8")
                     test.load_xml(resp, fromFile=False)
                     multibore.bores.append(test)
         
-        QMessageBox.information(self.dockwidget, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
+        # QMessageBox.information(self.dockwidget, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
         gtl = GeotechnischLengteProfiel()
         gtl.set_line(geometry)
         gtl.set_cpts(multicpt)
@@ -398,7 +428,14 @@ class BroDownloadPlot:
         gtl.project_on_line()
         gtl.set_groundlevel()
         fig = gtl.plot(boundaries={}, profilename="", saveFig=False)
-        fig.show()
+        if show_plot:
+            fig.show()
+        if save_svg:
+            fig.savefig(f'{folder}/lengteprofiel.svg')  # TODO: naam moet overgenomen uit laag in QGis
+        if save_png:
+            fig.savefig(f'{folder}/lengteprofiel.png')
+        if save_pdf:
+            fig.savefig(f'{folder}/lengteprofiel.pdf')
 
     def haal_en_plot(self, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder):
         test_types = []
@@ -485,4 +522,4 @@ class BroDownloadPlot:
         self.update(point)
         
     def update(self, point: QgsPointXY):   
-        self.plotDataBro_eenvoudig(point, self.do_cpt, self.do_boring, self.show_plot)
+        self.plotDataBro_verkennen(point, self.do_cpt, self.do_boring, self.show_plot)
