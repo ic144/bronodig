@@ -406,7 +406,7 @@ class BroDownloadPlot:
                         broIds.append(broId)
                         broGeoms.append(broGeom)
 
-            for broId in broIds:
+            for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
                 if test_type == 'cpt' and do_cpt:
                     test = Cpt()
                     url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
@@ -444,7 +444,7 @@ class BroDownloadPlot:
         if do_boring:
             test_types.append('bhrgt')
             
-        for test_type in test_types:
+        for test_type in test_types: # TODO: check ook of locatie binnen polygoon valt
             if test_type == 'cpt':
                 test = Cpt()
                 url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
