@@ -33,7 +33,7 @@ import os.path
 
 from .coordinate_capture_map_tool import CoordinateCaptureMapTool
 
-from qgis.core import QgsPointXY
+from qgis.core import QgsPointXY, QgsGeometry
 from qgis.gui import QgsMapTool, QgsMapToolEmitPoint
 from qgis.utils import iface
 
@@ -310,11 +310,12 @@ class BroDownloadPlot:
         save_xml, save_png, save_pdf = False, False, False
         folder = ''
 
-        marge = 1
-        bbox = (int(point[0])-marge,int(point[1])-marge, int(point[0]+marge),int(point[1]+marge))          
+        geometry = point.buffer(1)
+
+        bbox = geometry.boundingBox()
         miny, minx = transformer.transform(bbox[0], bbox[1])
         maxy, maxx = transformer.transform(bbox[2], bbox[3])
-        self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+        self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
 
     def plotDataBro_bulk(self, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer):
         # maak een bounding box in lat, lon -> gebruiken we niet
@@ -331,7 +332,7 @@ class BroDownloadPlot:
                 minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
                 miny, minx = transformer.transform(minx, miny)
                 maxy, maxx = transformer.transform(maxx, maxy)
-                self.haal_en_plot(minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+                self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
 
     def plotDataBro_profiel(self, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, selected_layer, buffer):
         # maak een bounding box in lat, lon
@@ -351,9 +352,9 @@ class BroDownloadPlot:
                 geometry = geometry.asWkt()
                 geometry = loads(geometry)
                 
-                self.maak_profiel(geometry, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder)
+                self.maak_profiel(geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder)
         
-    def maak_profiel(self, geometry, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder):
+    def maak_profiel(self, geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder):
         test_types = ['cpt', 'bhrgt']
         
         for test_type in test_types:
@@ -402,9 +403,9 @@ class BroDownloadPlot:
                             
                             broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
 
-                    if type(broId) == str and type(broGeom) == Point:
-                        broIds.append(broId)
-                        broGeoms.append(broGeom)
+                    if type(broId) == str and type(broGeom) == Point and QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5))).contains(QgsGeometry.fromWkt(str(broGeom))):
+                            broIds.append(broId)
+                            broGeoms.append(broGeom)
 
             for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
                 if test_type == 'cpt' and do_cpt:
@@ -437,7 +438,7 @@ class BroDownloadPlot:
         if save_pdf:
             fig.savefig(f'{folder}/lengteprofiel.pdf')
 
-    def haal_en_plot(self, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder):
+    def haal_en_plot(self, geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder):
         test_types = []
         if do_cpt:
             test_types.append('cpt')
@@ -489,7 +490,7 @@ class BroDownloadPlot:
 
                             broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
 
-                    if type(broId) == str and type(broGeom) == Point:
+                    if type(broId) == str and type(broGeom) == Point and geometry.contains(QgsGeometry.fromWkt(str(broGeom))):
                         broIds.append(broId)
                         broGeoms.append(broGeom)
 
