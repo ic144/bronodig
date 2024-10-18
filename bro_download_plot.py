@@ -33,7 +33,7 @@ import os.path
 
 from .coordinate_capture_map_tool import CoordinateCaptureMapTool
 
-from qgis.core import QgsPointXY, QgsGeometry
+from qgis.core import QgsPointXY, QgsGeometry, QgsVectorLayer, QgsProject, QgsFeature
 from qgis.gui import QgsMapTool, QgsMapToolEmitPoint
 from qgis.utils import iface
 
@@ -317,6 +317,22 @@ class BroDownloadPlot:
         maxy, maxx = transformer.transform(bbox[2], bbox[3])
         self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
 
+    def maak_laag(self):
+        uri = "point?crs=epsg:28992&field=id:integer"
+        scratchLayer = QgsVectorLayer(uri, "Scratch point layer",  "memory")
+        vpr = scratchLayer.dataProvider()
+        QgsProject.instance().addMapLayer(scratchLayer)
+        return vpr
+                
+    def voeg_toe_aan_laag(self, dataprovider, punt):
+        pnt = QgsGeometry.fromWkt(str(punt)) 
+        f = QgsFeature()
+        f.setGeometry(pnt)
+        f.setAttributes([1]) #added line
+        dataprovider.addFeatures([f])
+
+        return
+
     def plotDataBro_bulk(self, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, selected_layer):
         # maak een bounding box in lat, lon -> gebruiken we niet
         # maak een center met radius in lat, lon -> gebruiken we wel
@@ -356,6 +372,8 @@ class BroDownloadPlot:
         
     def maak_profiel(self, geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder):
         test_types = ['cpt', 'bhrgt']
+        
+        dataprovider = self.maak_laag()
         
         for test_type in test_types:
             if test_type == 'cpt':
@@ -406,6 +424,7 @@ class BroDownloadPlot:
                     if type(broId) == str and type(broGeom) == Point and QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5))).contains(QgsGeometry.fromWkt(str(broGeom))):
                             broIds.append(broId)
                             broGeoms.append(broGeom)
+                            self.voeg_toe_aan_laag(dataprovider, broGeom)
 
             for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
                 if test_type == 'cpt' and do_cpt:
@@ -439,6 +458,9 @@ class BroDownloadPlot:
             fig.savefig(f'{folder}/lengteprofiel.pdf')
 
     def haal_en_plot(self, geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder):
+        
+        dataprovider = self.maak_laag()
+        
         test_types = []
         if do_cpt:
             test_types.append('cpt')
@@ -493,6 +515,8 @@ class BroDownloadPlot:
                     if type(broId) == str and type(broGeom) == Point and geometry.contains(QgsGeometry.fromWkt(str(broGeom))):
                         broIds.append(broId)
                         broGeoms.append(broGeom)
+                        self.voeg_toe_aan_laag(dataprovider, broGeom)
+
 
             # QMessageBox.information(self.dlg, "aantal", f"aantal {len(broIds)}")
 
