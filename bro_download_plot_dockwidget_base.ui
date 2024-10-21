@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>386</width>
-    <height>923</height>
+    <width>388</width>
+    <height>929</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <item row="2" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -280,6 +280,19 @@ p, li { white-space: pre-wrap; }
          <string>Kies een laag</string>
         </property>
        </widget>
+       <widget class="QCheckBox" name="checkBox_laag_bulk">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>340</y>
+          <width>201</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Laag toevoegen met locaties</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QWidget" name="tab_3">
        <attribute name="title">
@@ -492,6 +505,19 @@ p, li { white-space: pre-wrap; }
         </property>
         <property name="value">
          <number>25</number>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_laag_profiel">
+        <property name="geometry">
+         <rect>
+          <x>50</x>
+          <y>400</y>
+          <width>201</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Laag toevoegen met locaties</string>
         </property>
        </widget>
       </widget>
