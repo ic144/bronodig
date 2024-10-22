@@ -313,13 +313,14 @@ class BroDownloadPlot:
 
         save_xml, save_png, save_pdf = False, False, False
         folder = ''
-
-        geometry = point.buffer(1)
+        
+        geometry = QgsGeometry.fromPointXY(point).buffer(1, 5)
 
         bbox = geometry.boundingBox()
-        miny, minx = transformer.transform(bbox[0], bbox[1])
-        maxy, maxx = transformer.transform(bbox[2], bbox[3])
-        self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder)
+        miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
+        maxy, maxx = transformer.transform(bbox.xMaximum(), bbox.yMaximum())
+        QMessageBox.information(self.dockwidget, "aantal", f"{minx} {maxy}")
+        self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, maak_laag=False)
 
     def maak_laag(self):
         uri = "point?crs=epsg:28992&field=id:integer"
@@ -349,9 +350,8 @@ class BroDownloadPlot:
             if geometry.asWkt().lower().startswith('polygon'):
                 # maak een bounding box voor het ophalen van data
                 bbox = geometry.boundingBox()
-                minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
-                miny, minx = transformer.transform(minx, miny)
-                maxy, maxx = transformer.transform(maxx, maxy)
+                miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
+                maxy, maxx = transformer.transform(bbox.xMaximum(), bbox.yMaximum())
                 self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, maak_laag)
 
     def plotDataBro_profiel(self, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, selected_layer, buffer):
@@ -366,9 +366,8 @@ class BroDownloadPlot:
             if geometry.asWkt().lower().startswith('linestring'):
                 # maak een bounding box voor het ophalen van data
                 bbox = geometry.buffer(buffer, segments=5).boundingBox()
-                minx, maxx, miny, maxy = bbox.xMinimum(), bbox.xMaximum(), bbox.yMinimum(), bbox.yMaximum()
-                miny, minx = transformer.transform(minx, miny)
-                maxy, maxx = transformer.transform(maxx, maxy)
+                miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
+                maxy, maxx = transformer.transform(bbox.xMaximum(), bbox.yMaximum())
                 geometry = geometry.asWkt()
                 geometry = loads(geometry)
                 
