@@ -319,7 +319,7 @@ class BroDownloadPlot:
         bbox = geometry.boundingBox()
         miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
         maxy, maxx = transformer.transform(bbox.xMaximum(), bbox.yMaximum())
-        
+        QMessageBox.information(self.dockwidget, "aantal", f"{minx} {maxy}")
         self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, maak_laag=False)
 
     def maak_laag(self):
@@ -396,7 +396,7 @@ class BroDownloadPlot:
             today = datetime.today().strftime('%Y-%m-%d')
 
             # beginDate mag niet te vroeg zijn 2017-01-01 werkt, 2008 niet
-            dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": minx, "lon": miny}, "upperCorner": {"lat": maxx, "lon": maxy}}}}
+            dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": miny, "lon": minx}, "upperCorner": {"lat": maxy, "lon": maxx}}}}
             dataBB = json.dumps(dataBBdict)
 
             # doe de request
