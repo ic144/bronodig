@@ -314,7 +314,7 @@ class BroDownloadPlot:
         save_xml, save_png, save_pdf = False, False, False
         folder = ''
         
-        geometry = QgsGeometry.fromPointXY(point).buffer(10, 5)
+        geometry = QgsGeometry.fromPointXY(point).buffer(1, 5)
 
         bbox = geometry.boundingBox()
         miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
