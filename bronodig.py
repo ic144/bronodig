@@ -470,7 +470,7 @@ class BroDownloadPlot:
         if do_boring:
             test_types.append('bhrgt')
             
-        for test_type in test_types: # TODO: check ook of locatie binnen polygoon valt
+        for test_type in test_types:
             if test_type == 'cpt':
                 test = Cpt()
                 url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
