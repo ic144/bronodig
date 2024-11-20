@@ -32,5 +32,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
-    from .bro_download_plot import BroDownloadPlot
+    from .bronodig import BroDownloadPlot
     return BroDownloadPlot(iface)
