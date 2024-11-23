@@ -521,8 +521,6 @@ class BroDownloadPlot:
                             self.voeg_toe_aan_laag(dataprovider, broGeom)
 
 
-            # QMessageBox.information(self.dlg, "aantal", f"aantal {len(broIds)}")
-
             for broId in broIds:
                 if test_type == 'cpt':
                     url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
@@ -537,7 +535,8 @@ class BroDownloadPlot:
                     resp = QgsNetworkAccessManager.blockingGet(request).content()
                     test.load_xml(resp, fromFile=False)
 
-
+                # QMessageBox.information(self.dockwidget, "aantal", f"{resp} {test_type}")
+                
                 # plot met de method uit de gefxml_reader
                 figure = test.plot(saveFig=False)
                 if save_png:
@@ -548,7 +547,8 @@ class BroDownloadPlot:
                     figure.show()
                 if save_xml:
                     with open(f'{folder}/{broId}.xml', 'a') as f:
-                        f.write(resp)
+                        f.write(str(resp.data(), encoding='utf-8'))
+                plt.close('all')
 
     def mouseClicked(self, point: QgsPointXY):
         self.update(point)
