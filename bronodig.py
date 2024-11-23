@@ -548,7 +548,6 @@ class BroDownloadPlot:
                 if save_xml:
                     with open(f'{folder}/{broId}.xml', 'a') as f:
                         f.write(str(resp.data(), encoding='utf-8'))
-                plt.close('all')
 
     def mouseClicked(self, point: QgsPointXY):
         self.update(point)
