@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>388</width>
-    <height>929</height>
+    <width>363</width>
+    <height>945</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <item row="2" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -519,6 +519,53 @@ p, li { white-space: pre-wrap; }
         </property>
         <property name="text">
          <string>Laag toevoegen met locaties</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="tab_4">
+       <attribute name="title">
+        <string>Toevoegen</string>
+       </attribute>
+       <widget class="QgsFileWidget" name="mQgsFileWidget_toevoegen">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>60</y>
+          <width>101</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="storageMode">
+         <enum>QgsFileWidget::GetDirectory</enum>
+        </property>
+        <property name="options">
+         <set>QFileDialog::ShowDirsOnly</set>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_8">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>40</y>
+          <width>171</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Map met bestanden</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButtonToevoegen">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>90</y>
+          <width>301</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Toevoegen</string>
         </property>
        </widget>
       </widget>

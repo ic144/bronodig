@@ -19,7 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import pyqtSignal, QSettings, QTranslator, QCoreApplication, Qt, QUrl
+from qgis.PyQt.QtCore import pyqtSignal, QSettings, QTranslator, QCoreApplication, Qt, QUrl, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMessageBox, QVBoxLayout, QWidget
 from qgis.PyQt.QtNetwork import QNetworkRequest
@@ -32,7 +32,7 @@ import os.path
 
 from .coordinate_capture_map_tool import CoordinateCaptureMapTool
 
-from qgis.core import QgsPointXY, QgsGeometry, QgsVectorLayer, QgsProject, QgsFeature, QgsNetworkAccessManager
+from qgis.core import QgsPointXY, QgsGeometry, QgsVectorLayer, QgsProject, QgsFeature, QgsNetworkAccessManager, QgsFields, QgsField
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -226,6 +226,7 @@ class BroDownloadPlot:
             self.dockwidget.pushButtonVerkennen.clicked.connect(self.verkennen_tab)
             self.dockwidget.pushButtonBulk.clicked.connect(self.bulk_tab)
             self.dockwidget.pushButtonProfiel.clicked.connect(self.profiel_tab)
+            self.dockwidget.pushButtonToevoegen.clicked.connect(self.toevoegen_tab)
     
         self.mc = self.iface.mapCanvas()
         # self.dlg.doubleSpinBoxX.setValue(self.mc.center().x())
@@ -298,6 +299,31 @@ class BroDownloadPlot:
 
         self.plotDataBro_profiel(do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, selected_layer, buffer)
 
+    def toevoegen_tab(self):
+        dataprovider = self.maak_laag()
+        
+        folder = self.dockwidget.mQgsFileWidget_toevoegen.filePath()
+        
+        files = [f"{folder}/{f}" for f in os.listdir(folder) if f.lower().endswith('gef') or f.lower().endswith('xml')]
+
+        for idnr, f in enumerate(files):
+            if f.lower().endswith('gef') and not os.path.isdir(f):
+                try:
+                    test = Cpt()
+                    test.load_gef(f)
+                except:
+                    test = Bore()
+                    test.load_gef(f)
+
+            elif f.lower().endswith('xml') and not os.path.isdir(f):
+                try:
+                    test = Cpt()
+                    test.load_xml(f)
+                except:
+                    test = Bore()
+                    test.load_xml(f)
+            punt = Point(test.easting, test.northing)
+            self.voeg_toe_aan_laag(dataprovider, punt, test.testid, idnr)
 
     def plotDataBro_verkennen(self, point, do_cpt, do_boring, show_plot):
         # maak een bounding box in lat, lon -> gebruiken we niet
@@ -320,15 +346,21 @@ class BroDownloadPlot:
         uri = "point?crs=epsg:28992&field=id:integer"
         scratchLayer = QgsVectorLayer(uri, "Scratch point layer",  "memory")
         vpr = scratchLayer.dataProvider()
+        
+        vpr.addAttributes([QgsField('id', QVariant.Int), QgsField('test', QVariant.String)])
+        scratchLayer.updateFields()
         QgsProject.instance().addMapLayer(scratchLayer)
         return vpr
                 
-    def voeg_toe_aan_laag(self, dataprovider, punt):
+    def voeg_toe_aan_laag(self, dataprovider, punt, test_id, idnr):
+
         pnt = QgsGeometry.fromWkt(str(punt)) 
-        f = QgsFeature()
-        f.setGeometry(pnt)
-        f.setAttributes([1]) #added line
-        dataprovider.addFeatures([f])
+        feature = QgsFeature()
+        feature.setGeometry(pnt)
+        
+        feature.setAttributes([idnr, test_id])
+        
+        dataprovider.addFeatures([feature])
 
         return
 
@@ -429,7 +461,7 @@ class BroDownloadPlot:
                             broIds.append(broId)
                             broGeoms.append(broGeom)
                             if maak_laag:
-                                self.voeg_toe_aan_laag(dataprovider, broGeom)
+                                self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
 
             for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
                 if test_type == 'cpt' and do_cpt:
@@ -525,7 +557,7 @@ class BroDownloadPlot:
                         broIds.append(broId)
                         broGeoms.append(broGeom)
                         if maak_laag:
-                            self.voeg_toe_aan_laag(dataprovider, broGeom)
+                            self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
 
             if len(broIds) == 0:
                 QMessageBox.information(self.dockwidget, "Foutmelding", "Geen objecten gevonden.\nGebruik je de functie verkennen, zoom dan in en klik dichter bij het gewenste punt")
