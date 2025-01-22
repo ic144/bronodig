@@ -373,7 +373,7 @@ class BroDownloadPlot:
 
         for feature in selected_layer.getFeatures():
             geometry = feature.geometry()
-            if geometry.asWkt().lower().startswith('polygon'):
+            if geometry.asWkt().lower().startswith('polygon') or geometry.asWkt().lower().startswith('multipoly'):
                 # maak een bounding box voor het ophalen van data
                 bbox = geometry.boundingBox()
                 miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
@@ -388,8 +388,15 @@ class BroDownloadPlot:
 
         # maak een profiel als er een lijn is opgegeven
         for feature in selected_layer.getFeatures():
-            geometry = feature.geometry()        
-            if geometry.asWkt().lower().startswith('linestring'):
+            geometry = feature.geometry()
+            
+            if geometry.asWkt().lower().startswith('linestring') or geometry.asWkt().lower().startswith('multiline'):
+                
+                if "naam" in selected_layer.fields().names():
+                    name = feature["naam"]
+                else:
+                    name = ""
+                
                 # maak een bounding box voor het ophalen van data
                 bbox = geometry.buffer(buffer, segments=5).boundingBox()
                 miny, minx = transformer.transform(bbox.xMinimum(), bbox.yMinimum())
@@ -397,9 +404,9 @@ class BroDownloadPlot:
                 geometry = geometry.asWkt()
                 geometry = loads(geometry)
                 
-                self.maak_profiel(geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag)
+                self.maak_profiel(geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, name)
         
-    def maak_profiel(self, geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag):
+    def maak_profiel(self, geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, name):
         test_types = ['cpt', 'bhrgt']
         
         if maak_laag:
@@ -480,16 +487,16 @@ class BroDownloadPlot:
         gtl.set_cpts(multicpt)
         gtl.set_bores(multibore)
         gtl.project_on_line()
-        gtl.set_groundlevel()
-        fig = gtl.plot(boundaries={}, profilename="", saveFig=False)
+        gtl.set_groundlevel()        
+        fig = gtl.plot(boundaries={}, profilename=name, saveFig=False)
         if show_plot:
             fig.show()
         if save_svg:
-            fig.savefig(f'{folder}/lengteprofiel.svg')  # TODO: naam moet overgenomen uit laag in QGis
+            fig.savefig(f'{folder}/lengteprofiel{name}.svg')
         if save_png:
-            fig.savefig(f'{folder}/lengteprofiel.png')
+            fig.savefig(f'{folder}/lengteprofiel{name}.png')
         if save_pdf:
-            fig.savefig(f'{folder}/lengteprofiel.pdf')
+            fig.savefig(f'{folder}/lengteprofiel{name}.pdf')
 
     def haal_en_plot(self, geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, maak_laag):
         
@@ -552,6 +559,8 @@ class BroDownloadPlot:
                         if maak_laag:
                             self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
 
+            if len(broIds) == 0:
+                QMessageBox.information(self.dockwidget, "Foutmelding", "Geen objecten gevonden.\nGebruik je de functie verkennen, zoom dan in en klik dichter bij het gewenste punt")
 
             for broId in broIds:
                 if test_type == 'cpt':
