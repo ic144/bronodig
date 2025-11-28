@@ -46,7 +46,7 @@ import re
 from datetime import datetime
 from shapely.wkt import loads
 
-from .gefxml_reader import Cpt, Bore
+from .gefxml_reader import Cpt, Bore, Test
 from .geotechnisch_lengteprofiel import Cptverzameling, Boreverzameling, GeotechnischLengteProfiel
 
 
@@ -281,6 +281,9 @@ class BroDownloadPlot:
         do_cpt = self.dockwidget.checkBoxCpt_profiel.isChecked()
         do_boring = self.dockwidget.checkBoxBoring_profiel.isChecked()
 
+        gebruik_bro = self.dockwidget.checkBox_bro_bestanden.isChecked()
+        gebruik_lokaal = self.dockwidget.checkBox_lokale_bestanden.isChecked()
+
         save_svg = self.dockwidget.checkBoxSvg_profiel.isChecked()
         save_png = self.dockwidget.checkBoxPng_profiel.isChecked()
         save_pdf = self.dockwidget.checkBoxPdf_profiel.isChecked()
@@ -288,6 +291,11 @@ class BroDownloadPlot:
             folder = self.dockwidget.mQgsFileWidget_profiel.filePath()
         else:
             folder = ""
+
+        if gebruik_lokaal:
+            folder = self.dockwidget.mQgsFileWidget_toevoegen.filePath()
+        else:
+            folder = None    
 
         buffer = float(self.dockwidget.spinBox_buffer.value())
 
@@ -297,7 +305,7 @@ class BroDownloadPlot:
 
         selected_layer = self.dockwidget.mMapLayerComboBox_profiel.currentLayer()
 
-        self.plotDataBro_profiel(do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, selected_layer, buffer)
+        self.plotDataBro_profiel(do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, selected_layer, buffer, gebruik_bro, gebruik_lokaal)
 
     def toevoegen_tab(self):
         dataprovider = self.maak_laag()
@@ -380,7 +388,7 @@ class BroDownloadPlot:
                 maxy, maxx = transformer.transform(bbox.xMaximum(), bbox.yMaximum())
                 self.haal_en_plot(geometry, minx, maxx, miny, maxy, do_cpt, do_boring, save_xml, save_png, save_pdf, show_plot, folder, maak_laag)
 
-    def plotDataBro_profiel(self, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, selected_layer, buffer):
+    def plotDataBro_profiel(self, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, selected_layer, buffer, gebruik_bro, gebruik_lokaal):
         # maak een bounding box in lat, lon
         latlon = CRS.from_epsg(4326)  # TODO: volgens BRO API 4258
         rd = CRS.from_epsg(28992)
@@ -404,83 +412,118 @@ class BroDownloadPlot:
                 geometry = geometry.asWkt()
                 geometry = loads(geometry)
                 
-                self.maak_profiel(geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, name)
+                self.maak_profiel(geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, name, gebruik_bro, gebruik_lokaal)
         
-    def maak_profiel(self, geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, name):
+    def maak_profiel(self, geometry, buffer, minx, miny, maxx, maxy, do_cpt, do_boring, save_svg, save_png, save_pdf, show_plot, folder, maak_laag, name, gebruik_bro, gebruik_lokaal):
         test_types = ['cpt', 'bhrgt']
         
         if maak_laag:
             dataprovider = self.maak_laag()
+
+        multicpt = Cptverzameling()
+        multibore = Boreverzameling()
         
-        for test_type in test_types:
-            if test_type == 'cpt':
-                url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
-                multicpt = Cptverzameling()
+        if gebruik_bro:
+            for test_type in test_types:
+                if test_type == 'cpt':
+                    url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
 
-            elif test_type == 'bhrgt':
-                url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches"
-                multibore = Boreverzameling()
+                elif test_type == 'bhrgt':
+                    url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches"
 
-            # maak een request om mee te geven aan de url
-            today = datetime.today().strftime('%Y-%m-%d')
+                # maak een request om mee te geven aan de url
+                today = datetime.today().strftime('%Y-%m-%d')
 
-            # beginDate mag niet te vroeg zijn 2017-01-01 werkt, 2008 niet
-            dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": miny, "lon": minx}, "upperCorner": {"lat": maxy, "lon": maxx}}}}
-            dataBB = json.dumps(dataBBdict)
+                # beginDate mag niet te vroeg zijn 2017-01-01 werkt, 2008 niet
+                dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": miny, "lon": minx}, "upperCorner": {"lat": maxy, "lon": maxx}}}}
+                dataBB = json.dumps(dataBBdict)
 
-            # doe de request
-            request = QNetworkRequest()
-            request.setUrl(QUrl(url))
-            request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
-            broResp = QgsNetworkAccessManager.blockingPost(request, data=str.encode(dataBB))
-            broResp_dec = broResp.content()
-           
-            root = ET.fromstring(broResp_dec)
+                # doe de request
+                request = QNetworkRequest()
+                request.setUrl(QUrl(url))
+                request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
+                broResp = QgsNetworkAccessManager.blockingPost(request, data=str.encode(dataBB))
+                broResp_dec = broResp.content()
+            
+                root = ET.fromstring(broResp_dec)
 
-            # lees xy en id in uit de xml
-            broIds = []
-            broGeoms = []
+                # lees xy en id in uit de xml
+                broIds = []
+                broGeoms = []
 
-            for element in root.iter():
-                if 'dispatchDocument' in element.tag:
-                    broId = False
-                    broGeom = False
+                for element in root.iter():
+                    if 'dispatchDocument' in element.tag:
+                        broId = False
+                        broGeom = False
 
-                    metadata = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
+                        metadata = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
 
-                    broId = metadata['broId']
-                    
-                    for child in element.iter():
-                        if 'standardizedLocation' in child.tag:
-                            locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
-                            coords = locationData['pos']
-                            
-                            broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
+                        broId = metadata['broId']
+                        
+                        for child in element.iter():
+                            if 'standardizedLocation' in child.tag:
+                                locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
+                                coords = locationData['pos']
+                                
+                                broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
 
-                    if type(broId) == str and type(broGeom) == Point and QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5))).contains(QgsGeometry.fromWkt(str(broGeom))):
-                            broIds.append(broId)
-                            broGeoms.append(broGeom)
-                            if maak_laag:
-                                self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
+                        if type(broId) == str and type(broGeom) == Point and QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5))).contains(QgsGeometry.fromWkt(str(broGeom))):
+                                broIds.append(broId)
+                                broGeoms.append(broGeom)
+                                if maak_laag:
+                                    self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
 
-            for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
-                if test_type == 'cpt' and do_cpt:
-                    test = Cpt()
-                    url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
-                    request = QNetworkRequest()
-                    request.setUrl(QUrl(url))
-                    resp = QgsNetworkAccessManager.blockingGet(request).content()
-                    test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
-                    multicpt.cpts.append(test)
-                elif test_type == 'bhrgt' and do_boring:
-                    test = Bore()
-                    url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
-                    request = QNetworkRequest()
-                    request.setUrl(QUrl(url))
-                    resp = QgsNetworkAccessManager.blockingGet(request).content()
-                    test.load_xml(resp, fromFile=False)
-                    multibore.bores.append(test)
+                for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
+                    if test_type == 'cpt' and do_cpt:
+                        test = Cpt()
+                        url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
+                        request = QNetworkRequest()
+                        request.setUrl(QUrl(url))
+                        resp = QgsNetworkAccessManager.blockingGet(request).content()
+                        test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
+                        multicpt.cpts.append(test)
+                    elif test_type == 'bhrgt' and do_boring:
+                        test = Bore()
+                        url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
+                        request = QNetworkRequest()
+                        request.setUrl(QUrl(url))
+                        resp = QgsNetworkAccessManager.blockingGet(request).content()
+                        test.load_xml(resp, fromFile=False)
+                        multibore.bores.append(test)
+
+        if gebruik_lokaal:
+            
+            buffered_line = QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5)))
+            
+            files = [f"{folder}/{f}" for f in os.listdir(folder) if f.lower().endswith(".xml") or f.lower().endswith(".gef")]
         
+            for f in files:
+                t = Test()
+                if f.lower().endswith("xml"):
+                    test_type = t.type_from_xml(f)
+                    if test_type == "cpt":
+                        test = Cpt()
+                        test.load_xml(f)
+                        if buffered_line.contains(QgsGeometry.fromWkt(str(Point(test.easting, test.northing)))):
+                            multicpt.cpts.append(test)
+                    elif test_type == "bore":
+                        test = Bore()
+                        test.load_xml(f)
+                        if buffered_line.contains(QgsGeometry.fromWkt(str(Point(test.easting, test.northing)))):    
+                            multibore.bores.append(test)
+                elif f.lower().endswith("gef"):
+                    test_type = t.type_from_gef(f)
+                    if test_type == "cpt":
+                        test = Cpt()
+                        test.load_gef(f)
+                        if buffered_line.contains(QgsGeometry.fromWkt(f"{Point(test.easting, test.northing)}")):
+                            multicpt.cpts.append(test)
+                    elif test_type == "bore":
+                        test = Bore()
+                        test.load_gef(f)
+                        if buffered_line.contains(QgsGeometry.fromWkt(str(Point(test.easting, test.northing)))):
+                            multibore.bores.append(test)
+
         # QMessageBox.information(self.dockwidget, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
         gtl = GeotechnischLengteProfiel()
         gtl.set_line(geometry)

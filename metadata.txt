@@ -6,7 +6,7 @@
 name=BROnodig
 qgisMinimumVersion=3.0
 description=Plugin om BRO data te downloaden en plotten
-version=0.5.0
+version=0.6.0
 author=Thomas van der Linden
 email=t.van.der.linden@amsterdam.nl
 
@@ -20,7 +20,7 @@ repository=https://github.com/ic144/bronodig
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=option to put locations of investigation on the map;works also with multilines and multipolygons; error message when nothing is found; name with multiple objects; put locations of local files on map; experimental status removed
+changelog=include local files in profile;option to put locations of investigation on the map;works also with multilines and multipolygons; error message when nothing is found; name with multiple objects; put locations of local files on map; experimental status removed
 
 # Tags are comma separated with spaces allowed
 tags=python, Basisregistratie, Ondergrond, cpt, sondering, boring, lengteprofiel, geotechniek
