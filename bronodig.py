@@ -48,7 +48,7 @@ from shapely.wkt import loads
 
 from .gefxml_reader import Cpt, Bore
 from .geotechnisch_lengteprofiel import Cptverzameling, Boreverzameling, GeotechnischLengteProfiel
-
+from .utils import haal_bro_overzicht, haal_bore_bro, haal_cpt_bro, process_bro_overzicht
 
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None):
@@ -411,29 +411,12 @@ class BroDownloadPlot:
         
         if maak_laag:
             dataprovider = self.maak_laag()
+
+        multibore = Boreverzameling()
+        multicpt = Cptverzameling()
         
         for test_type in test_types:
-            if test_type == 'cpt':
-                url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
-                multicpt = Cptverzameling()
-
-            elif test_type == 'bhrgt':
-                url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches"
-                multibore = Boreverzameling()
-
-            # maak een request om mee te geven aan de url
-            today = datetime.today().strftime('%Y-%m-%d')
-
-            # beginDate mag niet te vroeg zijn 2017-01-01 werkt, 2008 niet
-            dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": miny, "lon": minx}, "upperCorner": {"lat": maxy, "lon": maxx}}}}
-            dataBB = json.dumps(dataBBdict)
-
-            # doe de request
-            request = QNetworkRequest()
-            request.setUrl(QUrl(url))
-            request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
-            broResp = QgsNetworkAccessManager.blockingPost(request, data=str.encode(dataBB))
-            broResp_dec = broResp.content()
+            broResp_dec = haal_bro_overzicht(test_type, minx, miny, maxx, maxy)
            
             root = ET.fromstring(broResp_dec)
 
@@ -441,44 +424,16 @@ class BroDownloadPlot:
             broIds = []
             broGeoms = []
 
-            for element in root.iter():
-                if 'dispatchDocument' in element.tag:
-                    broId = False
-                    broGeom = False
+            broIds, broGeoms = process_bro_overzicht(root, QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5))))
+            for broId, broGeom in zip(broIds, broGeoms):
+                if maak_laag:
+                    self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
 
-                    metadata = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
-
-                    broId = metadata['broId']
-                    
-                    for child in element.iter():
-                        if 'standardizedLocation' in child.tag:
-                            locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
-                            coords = locationData['pos']
-                            
-                            broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
-
-                    if type(broId) == str and type(broGeom) == Point and QgsGeometry.fromWkt(str(geometry.buffer(buffer, 5))).contains(QgsGeometry.fromWkt(str(broGeom))):
-                            broIds.append(broId)
-                            broGeoms.append(broGeom)
-                            if maak_laag:
-                                self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
-
-            for broId in broIds:  # TODO: check ook of locatie binnen polygoon valt
                 if test_type == 'cpt' and do_cpt:
-                    test = Cpt()
-                    url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
-                    request = QNetworkRequest()
-                    request.setUrl(QUrl(url))
-                    resp = QgsNetworkAccessManager.blockingGet(request).content()
-                    test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
+                    test = haal_cpt_bro(broId)
                     multicpt.cpts.append(test)
                 elif test_type == 'bhrgt' and do_boring:
-                    test = Bore()
-                    url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
-                    request = QNetworkRequest()
-                    request.setUrl(QUrl(url))
-                    resp = QgsNetworkAccessManager.blockingGet(request).content()
-                    test.load_xml(resp, fromFile=False)
+                    test = haal_bore_bro(broId)
                     multibore.bores.append(test)
         
         # QMessageBox.information(self.dockwidget, "aantal", f"boringen {multibore.bores} \n cpt {multicpt.cpts}")
@@ -510,72 +465,24 @@ class BroDownloadPlot:
             test_types.append('bhrgt')
             
         for test_type in test_types:
-            if test_type == 'cpt':
-                test = Cpt()
-                url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
-
-            elif test_type == 'bhrgt':
-                test = Bore()
-                url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches"
-
-            # maak een request om mee te geven aan de url
-            today = datetime.today().strftime('%Y-%m-%d')
-
-            # beginDate mag niet te vroeg zijn 2017-01-01 werkt, 2008 niet
-            dataBBdict = {"registrationPeriod": {"beginDate": "2017-01-01", "endDate": today}, "area": {"boundingBox": {"lowerCorner": {"lat": miny, "lon": minx}, "upperCorner": {"lat": maxy, "lon": maxx}}}}
-            dataBB = json.dumps(dataBBdict)
-
-            # doe de request
-            request = QNetworkRequest()
-            request.setUrl(QUrl(url))
-            request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
-            broResp = QgsNetworkAccessManager.blockingPost(request, data=str.encode(dataBB))
-            broResp_dec = broResp.content()
+            broResp_dec = haal_bro_overzicht(test_type, minx, miny, maxx, maxy)
             
             root = ET.fromstring(broResp_dec)
 
-            # lees xy en id in uit de xml
-            broIds = []
-            broGeoms = []
 
-            for element in root.iter():
-                if 'dispatchDocument' in element.tag:
-                    broId = False
-                    broGeom = False
-
-                    metadata = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
-                    broId = metadata['broId']
-
-                    for child in element.iter():
-                        if 'standardizedLocation' in child.tag:
-                            locationData = ({re.sub(r'{.*}', '', p.tag) : re.sub(r'\s*', '', p.text) for p in element.iter() if p.text is not None})
-                            coords = locationData['pos']
-
-                            broGeom = Point(float(coords[:int(len(coords)/2)]), float(coords[int(len(coords)/2):]))
-
-                    if type(broId) == str and type(broGeom) == Point and geometry.contains(QgsGeometry.fromWkt(str(broGeom))):
-                        broIds.append(broId)
-                        broGeoms.append(broGeom)
-                        if maak_laag:
-                            self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
+            broIds, broGeoms = process_bro_overzicht(root, geometry)
 
             if len(broIds) == 0:
                 QMessageBox.information(self.dockwidget, "Foutmelding", "Geen objecten gevonden.\nGebruik je de functie verkennen, zoom dan in en klik dichter bij het gewenste punt")
 
-            for broId in broIds:
-                if test_type == 'cpt':
-                    url = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{broId}"
-                    request = QNetworkRequest()
-                    request.setUrl(QUrl(url))
-                    resp = QgsNetworkAccessManager.blockingGet(request).content()
-                    test.load_xml(resp, checkAddFrictionRatio=True, checkAddDepth=True, fromFile=False)
-                elif test_type == 'bhrgt':
-                    url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{broId}"
-                    request = QNetworkRequest()
-                    request.setUrl(QUrl(url))
-                    resp = QgsNetworkAccessManager.blockingGet(request).content()
-                    test.load_xml(resp, fromFile=False)
+            for broId, broGeom in zip(broIds, broGeoms):
+                if maak_laag:
+                    self.voeg_toe_aan_laag(dataprovider, broGeom, broId, None)
 
+                if test_type == 'cpt':
+                    test = haal_cpt_bro(broId)
+                elif test_type == 'bhrgt':
+                    test = haal_bore_bro(broId)
                 # QMessageBox.information(self.dockwidget, "aantal", f"{resp} {test_type}")
                 
                 # plot met de method uit de gefxml_reader
